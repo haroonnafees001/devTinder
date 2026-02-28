@@ -3,8 +3,10 @@ const express = require("express");
 const dbConnect = require("./config/database");
 const app = express();
 
+const bycrypt = require("bcrypt");
 const Users = require("./models/user");
 
+const validateSignup = require("./utils/validateSignup");
 dbConnect()
   .then(() => {
     console.log("Database connected");
@@ -21,9 +23,15 @@ app.use(express.json());
 
 app.post("/signup", async (req, res) => {
   console.log("req", req.body);
+
   
   const user = new Users(req.body);
   try {
+    validateSignup(req);
+   
+    const hashedPassword = await bycrypt.hash(req.body.password, 10);
+    console.log("hashedPassword", hashedPassword);
+    user.password = hashedPassword;
     await user.save();
     res.send("User created");
 
@@ -32,6 +40,27 @@ app.post("/signup", async (req, res) => {
     res.status(400).send(error.message);
   }
 });
+
+
+app.post('/login', async (req, res) => {
+  console.log("req", req.body);
+  const {email,password} = req.body;
+  try{
+    const user = await Users.findOne({email});
+    if(!user){
+      res.status(400).send("cannot find user");
+    } 
+    const isMatch = await bycrypt.compare(password,user.password);
+    if(!isMatch){
+      res.status(400).send("Invalid credentials");
+    }
+    res.send("Login successful");
+  }catch(error){
+    console.log(error);
+    res.status(400).send(error.message);
+  }
+}); 
+
 
 app.get('/user', async (req,res) => { //localhost:8080/user
   console.log("req", req.body);
@@ -68,15 +97,15 @@ app.delete('/user', async (req,res) => { //localhost:8080/user
   }
 })
 
-app.patch('/user', async (req,res) => { //localhost:8080/user
+app.patch('/user/:userId', async (req,res) => { //localhost:8080/user
   const data = req.body;
-  const userId = data._id;
+  const userId = req.params?.userId;
+  console.log("userId", userId);
   try{
     const user = await Users.findByIdAndUpdate(userId,data,{
       returnDocument: 'after',
       runValidators: true,
     });
-    console.log("user", user);
     res.send(user);
   }catch(error){  
     console.log(error);
