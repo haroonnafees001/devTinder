@@ -4,6 +4,7 @@ const dbConnect = require("./config/database");
 const app = express();
 
 const Users = require("./models/user");
+
 dbConnect()
   .then(() => {
     console.log("Database connected");
@@ -17,8 +18,10 @@ dbConnect()
 
 
 app.use(express.json());
+
 app.post("/signup", async (req, res) => {
-  console.log("req", );
+  console.log("req", req.body);
+  
   const user = new Users(req.body);
   try {
     await user.save();
@@ -26,8 +29,61 @@ app.post("/signup", async (req, res) => {
 
   } catch (error) {
     console.log(error);
+    res.status(400).send(error.message);
   }
 });
+
+app.get('/user', async (req,res) => { //localhost:8080/user
+  console.log("req", req.body);
+  const userEmail = req.body.email;
+  try{
+    const user = await Users.findOne({email:userEmail}).sort({_id:-1}); //latest inserted
+    if(!user){
+      res.status(400).send("cannot find user");
+    }
+    res.send(user);
+  }catch(error){
+    console.log(error);
+    res.status(400).send("cannot find user");
+  }
+  // try {
+  // const users = await Users.find({email:req.body.email});
+  // console.log("req", users);
+  // res.send(users);
+  // } catch (error) {
+  //   console.log(error);
+  //   res.status(400).send("cannot find user");
+  // }
+});
+
+app.delete('/user', async (req,res) => { //localhost:8080/user
+  console.log("req", req.body);
+  const userId = req.body._id;
+  try{
+    const user = await Users.findByIdAndDelete(userId);
+    res.send("User deleted");
+  }catch(error){  
+    console.log(error);
+    res.status(400).send("cannot delete user");
+  }
+})
+
+app.patch('/user', async (req,res) => { //localhost:8080/user
+  const data = req.body;
+  const userId = data._id;
+  try{
+    const user = await Users.findByIdAndUpdate(userId,data,{
+      returnDocument: 'after',
+      runValidators: true,
+    });
+    console.log("user", user);
+    res.send(user);
+  }catch(error){  
+    console.log(error);
+
+    res.status(400).send(error.message);
+  }
+})
 // // app.use('/test/12',(req, res) => {
 // //     res.send('Hello new route!');
 // // });

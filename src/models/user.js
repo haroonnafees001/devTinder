@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const validator = require("validator");
 
 const userScheme = new mongoose.Schema({
     firstName:{
@@ -18,13 +19,24 @@ const userScheme = new mongoose.Schema({
         required:true,
         min:3,
         max:50,
-        unique:true
+        trim: true,
+        lowercase: true,
+        validate(value) {
+            if (!validator.isEmail(value)) {
+                throw new Error("Email must be valid");
+            }
+        },
     },
     password:{
         type:String,
         required:true,
         min:3,
-        max:1024
+        max:1024,
+        validate(value){
+            if( !validator.isStrongPassword(value)){
+                throw new Error("Password must be strong");
+            }
+        }
     },
     date:{
         type:Date,
@@ -32,12 +44,29 @@ const userScheme = new mongoose.Schema({
     },
     gender:{
         type:String,
-        require:false
+        required:false,
+        validate(value) {
+            if (value.toLocaleLowerCase() !== "male" && value.toLocaleLowerCase()  !== "female" && value.toLocaleLowerCase()  !== "other") {
+                throw new Error("Gender must be Male, Female, or Other");
+            }
+        },
     },
     age:{
         type:Number,
-        require:false
+        required:false
+    },
+    skills:{
+        type:[String],
+        required:false,
+        validate(value) {
+            if (value.length < 3 || value.length > 10) {
+                throw new Error("At least 3 and at most 10 skills are required");
+            }
+        },
     }
+},
+{
+    timestamps: true,
 })
 
 module.exports= mongoose.model("User",userScheme);
